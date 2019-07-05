@@ -11,7 +11,7 @@ We provide our dataset and PyTorch implementation for relation network benchmark
 - PyTorch 0.4+
 
 ## FSS-1000 Dataset
-- Google drive: [download here (preparing)](http://35.236.10.4/dataset)
+- Google drive: [download here](https://drive.google.com/open?id=16TgqOeI_0P41Eh3jWQlxlRXG9KIqtMgI)
 - [Online Preview](http://35.236.10.4/dataset)   
 
 ## Getting Started
