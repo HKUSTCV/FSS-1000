@@ -16,6 +16,8 @@ We provide our dataset and PyTorch implementation for relation network benchmark
 
 ## Getting Started
 ### Testing
+First, download pretrained model [here](https://drive.google.com/open?id=1Dq8B-OKQT2ScVLkZGQ4DaCHU_5uDZznZ)
+
 ```
 python autolabel.py -sd imgs/example/support -td imgs/example/query
 ```
