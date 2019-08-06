@@ -2,7 +2,7 @@
 
 <img src='examples/example.png' align="left">
 
-We provide our dataset and PyTorch implementation for relation network benchmark. Details are in our paper. 
+We provide our dataset and PyTorch implementation for relation network benchmark. Details are in our [paper](https://arxiv.org/abs/1907.12347). 
 
 ## Prerequisites
 - Linux or macOS
@@ -36,4 +36,16 @@ View our testing results [here](http://35.236.10.4/scale)
 ```
 Coming soon
 ```
-  
+
+## Citing
+
+If you use this repository, dataset or want to reference our work, please use the following BibTeX entry.
+
+```
+@article{FSS1000,
+Author = {Tianhan Wei and Xiang Li and Yau Pun Chen and Yu-Wing Tai and Chi-Keung Tang},
+Title = {FSS-1000: A 1000-Class Dataset for Few-Shot Segmentation},
+Year = {2019},
+Eprint = {arXiv:1907.12347},
+}
+```
