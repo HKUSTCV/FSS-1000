@@ -26,11 +26,10 @@ parser.add_argument("-g","--gpu",type=int, default=0)
 parser.add_argument("-u","--hidden_unit",type=int,default=10)
 parser.add_argument("-d","--display_query_num",type=int,default=5)
 parser.add_argument("-t","--test_class",type=int,default=1)
-parser.add_argument("-modelf","--feature_encoder_model",type=str,default='../models/feature_encoder.pkl')
-parser.add_argument("-modelr","--relation_network_model",type=str,default='../models/relation_network.pkl')
-parser.add_argument("-tr","--TestResultPath",type=str,default='test_vgg_finetune')
-parser.add_argument("-sd","--support_dir",type=str,default='newsupp/eiffel_tower')
-parser.add_argument("-td","--test_dir",type=str,default='downloads/eiffel_tower')
+parser.add_argument("-modelf","--feature_encoder_model",type=str,default='models/feature_encoder.pkl')
+parser.add_argument("-modelr","--relation_network_model",type=str,default='models/relation_network.pkl')
+parser.add_argument("-sd","--support_dir",type=str,default='data/african_elephant/supp')
+parser.add_argument("-td","--test_dir",type=str,default='data/african_elephant/test')
 args = parser.parse_args()
 
 os.environ["CUDA_VISIBLE_DEVICES"]=str(np.argmax( [int(x.split()[2]) \
@@ -176,8 +175,8 @@ def get_oneshot_batch(testname):  #shuffle in query_images not done
         # process image
         image = cv2.imread('%s/image/%s' % (args.support_dir, imgnames[k].replace('.png', '.jpg')))
         if image is None:
-            print ('wrong')
-            stop
+            raise Exception('cannot load image ')
+            
         image = image[:,:,::-1] # bgr to rgb
         image = image / 255.0
         image = np.transpose(image, (2,0,1))
@@ -310,22 +309,17 @@ def main():
         feature_encoder.load_state_dict(torch.load(FEATURE_MODEL))
         print("load feature encoder success")
     else:
-        print('Can not load feature encoder: %s' % FEATURE_MODEL)
-        stop
+        raise Exception('Can not load feature encoder: %s' % FEATURE_MODEL)
     if os.path.exists(RELATION_MODEL):
         relation_network.load_state_dict(torch.load(RELATION_MODEL))
         print("load relation network success")
     else:
-        print('Can not load relation network: %s' % RELATION_MODEL)
-        stop
-    if not os.path.exists(args.TestResultPath):
-        os.makedirs(args.TestResultPath)
+        raise Exception('Can not load relation network: %s' % RELATION_MODEL)
+
 
     print("Testing...")
     meaniou = 0
     classname = args.support_dir
-    # classnames = os.listdir('./fewshot/testset')
-    # f = open('./%s/iou.txt' % args.TestResultPath, 'w')
     if os.path.exists('result1'):
         os.system('rm -r result1')
     if os.path.exists('result.zip'):
@@ -343,9 +337,6 @@ def main():
     testnames = os.listdir('%s' % args.test_dir)
     print ('%s testing images in class %s' % (len(testnames), classname))
 
-    # for i in range(len(imgnames)):
-    # print ('Testing images %s / %s ' % (i, len(imgnames)))
-
     for cnt, testname in enumerate(testnames):
 
         print ('%s / %s' % (cnt, len(testnames)))
@@ -357,8 +348,6 @@ def main():
         samples, sample_labels, batches, batch_labels = get_oneshot_batch(testname)
 
         #forward
-        # start = time.time()
-
         sample_features, _ = feature_encoder(Variable(samples).cuda(GPU))
         sample_features = sample_features.view(CLASS_NUM,SAMPLE_NUM_PER_CLASS,512,7,7)
         sample_features = torch.sum(sample_features,1).squeeze(1) # 1*512*7*7
@@ -368,7 +357,7 @@ def main():
         batch_features_ext = torch.transpose(batch_features_ext,0,1)
         relation_pairs = torch.cat((sample_features_ext,batch_features_ext),2).view(-1,1024,7,7)
         output = relation_network(relation_pairs,ft_list).view(-1,CLASS_NUM,224,224)
-        # print (time.time() - start)
+
         classiou = 0
         for i in range(0, batches.size()[0]):
             #get prediction
@@ -388,8 +377,6 @@ def main():
             # print ('iou=%0.4f' % iou)
             classiou += iou
         classiou /= 5.0
-        # print('%s  %.4f' % (classname, classiou))
-        # f.write('%s  %.4f\n' % (classname, classiou))
 
         #visulization
         if (cnt == 0):
@@ -400,34 +387,12 @@ def main():
                 supplabel = (supplabel * 255).astype(np.uint8)
                 suppedge = cv2.Canny(supplabel,1,1)
 
-                # gtedge = cv2.Canny(gtlabel,1,1)
-                # stick[0:224, 224*i:224*(i+1),:] = suppimg.copy()
-                # stick[224:224*2, 224*i:224*(i+1),:] = supplabel.copy()
-                # stick[224*2:224*3, 224*i:224*(i+1),:] = testimg.copy()
                 cv2.imwrite('./result1/%s/supp%s.png' % (classname,i), maskimg(suppimg, supplabel.copy()[:,:,0], suppedge,color=[0,255,0]))
         testimg = np.transpose(batches.numpy()[0][0:3], (1,2,0))[:,:,::-1] * 255
-        # gtlabel = (batch_labels.numpy()[i][0] * 255).astype(np.uint8)
         testlabel = stick[224*3:224*4, 224*i:224*(i+1),:].astype(np.uint8)
-        # print (testlabel.shape, gtlabel.shape)
         testedge = cv2.Canny(testlabel,1,1)
         cv2.imwrite('./result1/%s/test%s_raw.png' % (classname, cnt), testimg) #raw image
         cv2.imwrite('./result1/%s/test%s.png' % (classname,cnt), maskimg(testimg, testlabel.copy()[:,:,0], testedge))
-            # cv2.imwrite('./result1/%s/gt%s.png' % (classname,i), maskimg(testimg, gtlabel.copy(), gtedge, color=[0,255,0]))
 
-    #     cv2.imwrite('./%s/%s_test_scratch.png' % (args.TestResultPath, str(classname)), stick)
-    #     meaniou +=  classiou
-    # meaniou /= float(len(classnames))
-
-            # if i % 50 == 0:
-            #     stick = np.zeros((224,224*2), dtype=np.uint8)
-            #     stick[:,0:224] = testlabel.astype(np.uint8)*255
-            #     stick[:,224:] = pred.astype(np.uint8)*255
-            #     cv2.imwrite('./tmpresult/iou=%0.4f.png' % iou, stick)
-
-            # cv2.imwrite('./tmpresult/%s_iou=%0.4f_image.png' % (imgname.replace('.png',''), iou), stick)
-    # print ('Final mean IOU is: %0.4f' % meaniou)
-    # f.write('Final mean IOU is: %0.4f\n' % meaniou)
-    # f.close()
-    os.system('zip -q -r result.zip result1')
 if __name__ == '__main__':
     main()
